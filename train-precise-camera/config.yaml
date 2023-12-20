@@ -1,0 +1,8 @@
+path: "/lhome/opriadk/src/yolo-v8-test/data"
+train: "images/train"
+val: "images/val"
+test: "images/test"
+
+nc: 1
+
+names: ["drone"]
