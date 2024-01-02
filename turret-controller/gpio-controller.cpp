@@ -21,11 +21,14 @@ bool GPIO_Controller::Acquire()
     }
 
     if (gpioInitialise() < 0) {
+        std::cout << "Initialyse error" << std::endl;
         return false;
     }
 
+    s_running = true;
     s_counter = 1;
-    return 0 == gpioSetSignalFunc(SIGINT, GPIO_Controller::Stop);
+    return 0 == gpioSetSignalFunc(SIGINT, GPIO_Controller::Stop) &&
+           0 == gpioSetSignalFunc(SIGSEGV, GPIO_Controller::Stop);
 }
 
 void GPIO_Controller::Release()

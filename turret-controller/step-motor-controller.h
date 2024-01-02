@@ -5,6 +5,8 @@
 #include <condition_variable>
 #include <atomic>
 
+#include <iostream>
+
 namespace turret {
 
 template <int DIR_PIN, int STEP_PIN, unsigned int REDUCTION = 1, unsigned int IMP_PER_ROTATION = 400>
@@ -13,38 +15,56 @@ class StepMotorController
 public:
     StepMotorController() :
       m_blocked{true},
-      m_run{true},
+      m_run{false},
       m_pos{0},
       m_goInPositiveDirection{true} 
     {
         if (gpio::GPIO_Controller::Acquire())
         {
-            gpioSetMode(DIR_PIN, PI_OUTPUT);
-            gpioSetMode(STEP_PIN, PI_OUTPUT);
+            if (gpioSetMode(DIR_PIN, PI_OUTPUT) || gpioSetMode(STEP_PIN, PI_OUTPUT))
+            {
+                std::cout << "set mode error" << std::endl;
+                return;
+            }
+
+            m_run = true;
+
             m_controlThread = std::thread([this]()
             {
-                while (m_blocked)
+                while(true)
                 {
-                    std::unique_lock<std::mutex> lock(m_mutex);
-                    m_cv.wait(lock);
+                    while (m_blocked)
+                    {
+                        std::unique_lock<std::mutex> lock(m_mutex);
+                        m_cv.wait(lock);
+                    }
+
+                    if (!m_run)
+                    {
+                        return;
+                    } 
+
+                    std::chrono::microseconds delay(m_delayInMks.load());
+                    gpioWrite(STEP_PIN, PI_HIGH);
+                    std::this_thread::sleep_for(delay);
+                    gpioWrite(STEP_PIN, PI_LOW);
+                    std::this_thread::sleep_for(delay);
+                    m_pos += m_goInPositiveDirection ? 1 : -1;
                 }
-
-                if (!m_run) return;
-
-                std::chrono::microseconds delay(m_delayInMks.load());
-                gpioWrite(STEP_PIN, 1);
-                std::this_thread::sleep_for(delay);
-                gpioWrite(STEP_PIN, 0);
-                std::this_thread::sleep_for(delay);
-                m_pos += m_goInPositiveDirection ? 1 : -1;
             });
         }
     }
 
     ~StepMotorController() {
-        m_run = false;
-        if (m_blocked) Start();
-        m_controlThread.join();
+        if (m_run)
+        {
+            m_run = false;
+            if (m_blocked) Start();
+            if (m_controlThread.joinable())
+            {
+                m_controlThread.join();
+            }
+        }
         gpio::GPIO_Controller::Release();
     }
 

@@ -17,8 +17,8 @@ public:
     void GoToVerticalPosition();
 
 private:
-    StepMotorController<35, 37, 5> m_horizontalMotor;
-    StepMotorController<29, 31, 5> m_verticalMotor;
+    StepMotorController<19, 26, 5> m_horizontalMotor;
+    StepMotorController<5, 6, 5> m_verticalMotor;
     imu::MPU_6050_Controller m_imu;
 };
 
