@@ -1,5 +1,6 @@
 #include "gpio-controller.h"
 #include <signal.h>
+#include <iostream>
 
 namespace gpio
 {
