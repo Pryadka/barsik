@@ -4,6 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <algorithm>
 
 #include <iostream>
 
@@ -28,6 +29,7 @@ public:
             }
 
             m_run = true;
+            gpioWrite(DIR_PIN, 1);
 
             m_controlThread = std::thread([this]()
             {
@@ -42,9 +44,24 @@ public:
                     if (!m_run)
                     {
                         return;
-                    } 
+                    }
 
-                    std::chrono::microseconds delay(m_delayInMks.load());
+                    auto diff = m_delayInMks.load() - m_currentDelayInMks;
+                    std::clamp(diff, -k_delayDecreseInMks, k_delayDecreseInMks);
+                    m_currentDelayInMks += diff;
+
+                    if (m_currentDelayInMks < 0 && m_goInPositiveDirection)
+                    {
+                        m_goInPositiveDirection = false;
+                        gpioWrite(DIR_PIN, 0);
+                    }
+                    else if (m_currentDelayInMks > 0 && !m_goInPositiveDirection)
+                    {
+                        m_goInPositiveDirection = true;
+                        gpioWrite(DIR_PIN, 1);
+                    }
+
+                    std::chrono::microseconds delay(std::abs(m_currentDelayInMks));
                     gpioWrite(STEP_PIN, PI_HIGH);
                     std::this_thread::sleep_for(delay);
                     gpioWrite(STEP_PIN, PI_LOW);
@@ -79,21 +96,12 @@ public:
     }
 
     void SetSpeed(float speedGradPerSec) {
-        if (speedGradPerSec < 0) {
-            gpioWrite(DIR_PIN, 0);
-            speedGradPerSec = -speedGradPerSec;
-        } else {
-            gpioWrite(DIR_PIN, 1);
-        }
-
         speedGradPerSec *= REDUCTION;
-        if (speedGradPerSec > k_maxSpeed) {
-            speedGradPerSec = k_maxSpeed;
-        }
+        std::clamp(speedGradPerSec, -k_maxSpeed, k_maxSpeed);
 
-        // half of the period
-        double delay = ((1000000. * 360.) / speedGradPerSec) / (2 * IMP_PER_ROTATION);
-        m_delayInMks.store(static_cast<uint32_t>(delay));
+        // half of the period in mks
+        double delay = ((1000000. * 360.) / (2 * IMP_PER_ROTATION)) / speedGradPerSec;
+        m_delayInMks.store(static_cast<int32_t>(delay));
     }
 
     float GetAngleInGrad() const {
@@ -102,16 +110,20 @@ public:
 
 private:
     std::thread m_controlThread;
-    std::atomic<uint32_t> m_delayInMks;
+    std::atomic<int32_t> m_delayInMks;
+    int32_t m_currentDelayInMks = 0;
     std::condition_variable m_cv;
     std::mutex m_mutex;
     bool m_blocked;
     bool m_run;
     
     int m_pos;
-    bool m_goInPositiveDirection;
+    bool m_goInPositiveDirection = true;
 
     static constexpr float k_maxSpeed = 1000.;
+    static constexpr int32_t k_delayDecreseInMks = 1;  // should be adjusted and may be templete argument
+    static constexpr float k_StartSpeedGradPerSec = 2.; // should be adjusted for real device
+    static constexpr uint32_t k_initialDelay = ((1000000. * 360.) / (2 * IMP_PER_ROTATION)) / k_StartSpeedGradPerSec;
 };
 
 } // namespace step
