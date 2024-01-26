@@ -1,17 +1,11 @@
-find_package(Protobuf CONFIG REQUIRED)
+find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(Threads)
 
-#
-# Protobuf/Grpc source files
-#
 set(PROTO_FILES
     protos/turret-service.proto
 )
 
-#
-# Add Library target with protobuf sources
-#
 add_library(turret-proto ${PROTO_FILES})
 target_link_libraries(turret-proto
     PUBLIC
