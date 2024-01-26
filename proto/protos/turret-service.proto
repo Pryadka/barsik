@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package turret;
+
+service TurretController {
+    rpc GoToStartPosition(google.protobuf.Empty) returns(google.protobuf.Empty) {}
+
+    rpc SetDifference(AngleDiff) returns(google.protobuf.Empty) {}
+}
+
+message AngleDiff {
+    float horizontal = 1;
+    float vertical = 2;
+}
