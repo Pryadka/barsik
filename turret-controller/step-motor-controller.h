@@ -46,9 +46,9 @@ public:
                         return;
                     }
 
-                    auto diff = m_delayInMks.load() - m_currentDelayInMks;
+                    auto diff = m_currentDelayInMks - m_delayInMks.load();
                     std::clamp(diff, -k_delayDecreseInMks, k_delayDecreseInMks);
-                    m_currentDelayInMks += diff;
+                    m_currentDelayInMks -= diff;
 
                     if (m_currentDelayInMks < 0 && m_goInPositiveDirection)
                     {
@@ -96,12 +96,22 @@ public:
     }
 
     void SetSpeed(float speedGradPerSec) {
+        if (std::abs(speedGradPerSec) < k_minSpeed) {
+            Stop();
+            return;
+        }
+    
         speedGradPerSec *= REDUCTION;
         std::clamp(speedGradPerSec, -k_maxSpeed, k_maxSpeed);
 
         // half of the period in mks
         double delay = ((1000000. * 360.) / (2 * IMP_PER_ROTATION)) / speedGradPerSec;
         m_delayInMks.store(static_cast<int32_t>(delay));
+
+        if (m_blocked) {
+            m_currentDelayInMks = delay > 0. ? k_initialDelay : -k_initialDelay;
+            Start();
+        }
     }
 
     float GetAngleInGrad() const {
@@ -121,6 +131,7 @@ private:
     bool m_goInPositiveDirection = true;
 
     static constexpr float k_maxSpeed = 1000.;
+    static constexpr float k_minSpeed = 0.1;
     static constexpr int32_t k_delayDecreseInMks = 1;  // should be adjusted and may be templete argument
     static constexpr float k_StartSpeedGradPerSec = 2.; // should be adjusted for real device
     static constexpr uint32_t k_initialDelay = ((1000000. * 360.) / (2 * IMP_PER_ROTATION)) / k_StartSpeedGradPerSec;
