@@ -5,39 +5,38 @@
 namespace gpio
 {
 
-int GPIO_Controller::s_counter = 0;
-bool GPIO_Controller::s_running = false;
-
-void GPIO_Controller::Stop(int signum)
-{
-    gpioTerminate();
-    s_running = false;
+GPIO_Controller::GPIO_Controller() {
+    m_d = lgGpiochipOpen(4);
+}
+    
+GPIO_Controller::~GPIO_Controller() {
+    lgGpiochipClose(m_d);
 }
 
-bool GPIO_Controller::Acquire()
-{
-    if (s_running) {
-        s_counter++;
-        return true;
-    }
+void GPIO_Controller::SetMode(const std::vector<std::pair<int, IOMODE>> &pins) {
+    for (const auto & i : pins) {
+        switch (i.second)
+        {
+        case GPIO_Controller::IOMODE::IN:
+            lgGpioClaimInput(m_d, m_flags, i.first);
+            break;
 
-    if (gpioInitialise() < 0) {
-        std::cout << "Initialyse error" << std::endl;
-        return false;
+        case GPIO_Controller::IOMODE::OUT:
+            lgGpioClaimOutput(m_d, m_flags, i.first, 0);
+            break;
+        
+        default:
+            break;
+        }
     }
-
-    s_running = true;
-    s_counter = 1;
-    return 0 == gpioSetSignalFunc(SIGINT, GPIO_Controller::Stop) &&
-           0 == gpioSetSignalFunc(SIGSEGV, GPIO_Controller::Stop);
 }
 
-void GPIO_Controller::Release()
-{
-    if (--s_counter <= 0)
-    {
-        Stop(0);
-    }
+void GPIO_Controller::Set(int pin, GPIO_Controller::LEVEL value) {
+    lgGpioWrite(m_d, pin, static_cast<int>(value));    
+}
+
+int GPIO_Controller::Get(int pin) {
+    return lgGpioRead(m_d, pin);
 }
 
 } // namespace gpio

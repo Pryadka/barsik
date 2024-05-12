@@ -20,6 +20,6 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(${PROJECT_NAME}
-    pigpio
+    lgpio
     Eigen3::Eigen
 )

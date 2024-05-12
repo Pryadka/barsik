@@ -2,27 +2,26 @@
 #define __MPU_6050__
 
 #include "Eigen/Dense"
+#include "gpio-controller.h"
 
 namespace imu
 {
 
 class MPU_6050_Controller {
 public:
-    static MPU_6050_Controller &GetInstance();
-    static bool AutoCalibration();
+    MPU_6050_Controller(unsigned int address = 0x68);
+    ~MPU_6050_Controller();
 
     Eigen::Vector3f GetAccelData();
     Eigen::Vector3f GetGyroData();
     float GetTemp();
 
-    static Eigen::Vector3i gyroOffset;
-    static Eigen::Vector3i accelOffset;
+    bool CalibrateAndWriteOffsetsToFile(const char *path);
+    bool UploadOffsetsFromFile(const char *path);
 
 private :
-    MPU_6050_Controller(unsigned int address = 0x68);
-    ~MPU_6050_Controller();
-
     void SetOffsets();
+    bool AutoCalibration();
 
     Eigen::Vector3i GetAccelDataRaw();
     Eigen::Vector3i GetGyroDataRaw();
@@ -40,6 +39,9 @@ private :
 
     static constexpr uint32_t k_auto_calibration_accel_limit = 100;
     static constexpr uint32_t k_auto_calibration_gyro_limit = 20;
+
+    Eigen::Vector3i m_gyroOffset;
+    Eigen::Vector3i m_accelOffset;
 };
     
 } // namespace imu
