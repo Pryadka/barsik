@@ -12,6 +12,11 @@ OrbitalController::OrbitalController(gpio::GPIO_Controller &gpio):
     if (!m_imu.UploadOffsetsFromFile("mpu6050.data")) {
         std::cout << "Failed to upload imu data" << std::endl;
     }
+
+    // skip first measurement because they are wrong
+    for (int i = 0; i < 10; i++) {
+        m_imu.GetAccelData();
+    }
 }
 
 OrbitalController::~OrbitalController() {
@@ -40,27 +45,26 @@ void OrbitalController::GoToBasePosition() {
     using namespace std::chrono_literals;
     constexpr double PI = 3.14159265;
 
-    m_verticalMotor.SetSpeed(50.f);
+    m_verticalMotor.SetSpeed(20.f);
     auto angle = m_verticalMotor.GetAngleInGrad();
-    auto accelData = m_imu.GetAccelData();
-    std::cout <<  "c=" << accelData[2] << std::endl;
-    auto g1 = accelData[2];
-    m_verticalMotor.SetAngleInGrad(angle + 10.);
-    std::this_thread::sleep_for(100ms);
-    accelData = m_imu.GetAccelData();
-    auto g2 = accelData[2];
-    auto angleDiff = std::acos(g2) * 180.0 / PI;
-    if (g2 < g1) {
-        angleDiff = -angleDiff;
+    constexpr int averageCycleNumber = 100;
+    for (int i = 0; i < averageCycleNumber; i++) {
+        auto accelData = m_imu.GetAccelData();
+        //std::cout <<  "a=" << accelData[0] <<  ", b=" << accelData[1] <<  ", c=" << accelData[2] << std::endl;
+
+        auto angleDiff = -std::asin(accelData[0]) * 180.0 / PI;
+
+        std::cout << "AngleDiff=" << angleDiff << std::endl;
+        auto absAngleDiff = std::abs(angleDiff);
+        if (absAngleDiff < 0.5f) break;
+        if (absAngleDiff < 10.f) m_verticalMotor.SetSpeed(absAngleDiff);
+
+        m_verticalMotor.SetAngleInGrad(m_verticalMotor.GetAngleInGrad() + angleDiff);
+        std::this_thread::sleep_for(100ms);
     }
 
-    std::cout << "AngleDiff=" << angleDiff << std::endl;
-
-    m_verticalMotor.SetAngleInGrad(m_verticalMotor.GetAngleInGrad() + angleDiff);
-
-    std::this_thread::sleep_for(5s);
-
     m_verticalMotor.SetZeroPosition();
+    m_verticalMotor.SetSpeed();
 }
 
 void OrbitalController::Calibrate() {

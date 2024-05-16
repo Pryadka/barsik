@@ -19,8 +19,11 @@ public:
     bool CalibrateAndWriteOffsetsToFile(const char *path);
     bool UploadOffsetsFromFile(const char *path);
 
+    Eigen::Vector3i ReadAccelOffsets();
+    Eigen::Vector3i ReadGyroOffsets();
+
 private :
-    void SetOffsets();
+    void SetOffsets(const Eigen::Vector3i &accelOffset, const Eigen::Vector3i &gyroOffset);
     bool AutoCalibration();
 
     Eigen::Vector3i GetAccelDataRaw();
@@ -39,9 +42,6 @@ private :
 
     static constexpr uint32_t k_auto_calibration_accel_limit = 100;
     static constexpr uint32_t k_auto_calibration_gyro_limit = 20;
-
-    Eigen::Vector3i m_gyroOffset;
-    Eigen::Vector3i m_accelOffset;
 };
     
 } // namespace imu

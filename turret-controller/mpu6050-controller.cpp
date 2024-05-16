@@ -13,6 +13,10 @@ bool MPU_6050_Controller::AutoCalibration()
 {
     bool gyroStop = false, accelStop = false;
 
+    
+    Eigen::Vector3i gyroOffset;
+    Eigen::Vector3i accelOffset;
+
     int i = 0;
 
     while((i++ < 100) && (!gyroStop || !accelStop)) {
@@ -28,7 +32,7 @@ bool MPU_6050_Controller::AutoCalibration()
             else
             {
                 g_d /= 8;
-                m_gyroOffset -= g_d;
+                gyroOffset -= g_d;
             }
         }
 
@@ -44,20 +48,18 @@ bool MPU_6050_Controller::AutoCalibration()
             else
             {
                 a_d /= 8;
-                m_accelOffset -= a_d;
+                accelOffset -= a_d;
             }
         }
 
-        SetOffsets();
+        SetOffsets(accelOffset, gyroOffset);
         std::this_thread::sleep_for(100ms);
     }
 
     return gyroStop && accelStop;
 }
 
-MPU_6050_Controller::MPU_6050_Controller(unsigned int address) :
-    m_gyroOffset{Eigen::Vector3i::Zero()},
-    m_accelOffset{Eigen::Vector3i::Zero()}
+MPU_6050_Controller::MPU_6050_Controller(unsigned int address) 
 {
     m_i2c_handle = lgI2cOpen(1, address, 0);
     if (m_i2c_handle < 0) {
@@ -69,7 +71,6 @@ MPU_6050_Controller::MPU_6050_Controller(unsigned int address) :
         lgI2cWriteByteData(m_i2c_handle, 0x1b, 0x00); // gyro config. value 0 for +/-250deg/sec
         lgI2cWriteByteData(m_i2c_handle, 0x1c, 0x00); // accel config value 0 for +/-2g
 
-        SetOffsets();
         // self test
         lgI2cWriteByteData(m_i2c_handle, 0x0, 0x81);
         lgI2cWriteByteData(m_i2c_handle, 0x1, 0x01);
@@ -83,7 +84,7 @@ MPU_6050_Controller::~MPU_6050_Controller() {
     }
 }
 
-void MPU_6050_Controller::SetOffsets()
+void MPU_6050_Controller::SetOffsets(const Eigen::Vector3i &accelOffset, const Eigen::Vector3i &gyroOffset)
 {
     // offsets
     // accelerometer
@@ -98,9 +99,9 @@ void MPU_6050_Controller::SetOffsets()
     auto x_mask = a_x & 1;
     auto y_mask = a_y & 1;
     auto z_mask = a_z & 1;
-    a_x += m_accelOffset[0];
-    a_y += m_accelOffset[1];
-    a_z += m_accelOffset[2];
+    a_x += accelOffset[0];
+    a_y += accelOffset[1];
+    a_z += accelOffset[2];
     a_x |= x_mask;
     a_y |= y_mask;
     a_z |= z_mask;
@@ -110,9 +111,27 @@ void MPU_6050_Controller::SetOffsets()
     WriteInt16ToRegisters(0x0a, a_z); // y
 
     // gyro
-    WriteInt16ToRegisters(0x13, m_gyroOffset[0]); // x
-    WriteInt16ToRegisters(0x15, m_gyroOffset[1]); // y
-    WriteInt16ToRegisters(0x17, m_gyroOffset[2]); // z
+    WriteInt16ToRegisters(0x13, gyroOffset[0]); // x
+    WriteInt16ToRegisters(0x15, gyroOffset[1]); // y
+    WriteInt16ToRegisters(0x17, gyroOffset[2]); // z
+}
+
+Eigen::Vector3i MPU_6050_Controller::ReadAccelOffsets()
+{
+    return Eigen::Vector3i{
+        ReadInt16FromRegisters(0x06),
+        ReadInt16FromRegisters(0x08),
+        ReadInt16FromRegisters(0x0a)
+    };
+}
+
+Eigen::Vector3i MPU_6050_Controller::ReadGyroOffsets()
+{
+    return Eigen::Vector3i{
+        ReadInt16FromRegisters(0x13),
+        ReadInt16FromRegisters(0x15),
+        ReadInt16FromRegisters(0x17)
+    };
 }
 
 Eigen::Vector3i MPU_6050_Controller::GetAccelDataRaw()
@@ -142,6 +161,7 @@ Eigen::Vector3f MPU_6050_Controller::GetGyroData()
 
     return res;
 }
+
 Eigen::Vector3i MPU_6050_Controller::GetGyroDataRaw()
 {
     Eigen::Vector3i rawData(
@@ -162,16 +182,18 @@ float MPU_6050_Controller::GetTemp()
 bool MPU_6050_Controller::CalibrateAndWriteOffsetsToFile(const char *path)
 {
     auto res = AutoCalibration();
+    auto accelOffset = ReadAccelOffsets();
+    auto gyroOffset = ReadGyroOffsets();
     if (res) {
         res = false;
         std::ofstream output{path, std::ofstream::trunc};
         if (output.good()) {
             for (int i = 0; i < 3; i++) {
-                output << m_accelOffset[i] << " ";
+                output << accelOffset[i] << " ";
             }
             
             for (int i = 0; i < 3; i++) {
-                output << m_gyroOffset[i] << " ";
+                output << gyroOffset[i] << " ";
             }
             
             res = output.good();
@@ -185,16 +207,19 @@ bool MPU_6050_Controller::UploadOffsetsFromFile(const char *path)
 {
     bool res = false;
     std::ifstream input{path};
+    Eigen::Vector3i accelOffset, gyroOffset;
+
     if (input.good()) {
         for (int i = 0; i < 3; i++) {
-            input >> m_accelOffset[i];
+            input >> accelOffset[i];
         }
             
         for (int i = 0; i < 3; i++) {
-            input >> m_gyroOffset[i];
+            input >> gyroOffset[i];
         };
         res = input.good();
         input.close();
+        SetOffsets(accelOffset, gyroOffset);
     }
     return res;
 }

@@ -15,9 +15,9 @@ int main()
 
     turret::GunController gun{gpio_controller};
 
-    //orbi.Calibrate(); return 0;
+    //orbi.Calibrate(); //return 0;
 
-    orbi.GoToBasePosition(); std::this_thread::sleep_for(5s); return 0;
+    orbi.GoToBasePosition(); 
 
     std::this_thread::sleep_for(1s);
     float h = 90., v = 40.;

@@ -88,6 +88,8 @@ public:
         m_pos = m_currentPos = 0;
     }
 
+    static constexpr float k_maxSpeed = 500.;
+
 private:
     gpio::GPIO_Controller &m_gpio_controller;
     std::thread m_controlThread;
@@ -96,8 +98,6 @@ private:
     
     int m_pos;
     int m_currentPos;
-
-    static constexpr float k_maxSpeed = 1000.;
 };
 
 } // namespace step
