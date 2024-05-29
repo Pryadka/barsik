@@ -1,0 +1,2 @@
+float32 horizontal_diff
+float32 vertical_diff
