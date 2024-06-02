@@ -14,7 +14,7 @@ OrbitalController::OrbitalController(gpio::GPIO_Controller &gpio):
     }
 
     // skip first measurement because they are wrong
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 100; i++) {
         m_imu.GetAccelData();
     }
 }
@@ -46,7 +46,6 @@ void OrbitalController::GoToBasePosition() {
     constexpr double PI = 3.14159265;
 
     m_verticalMotor.SetSpeed(20.f);
-    auto angle = m_verticalMotor.GetAngleInGrad();
     constexpr int averageCycleNumber = 100;
     for (int i = 0; i < averageCycleNumber; i++) {
         auto accelData = m_imu.GetAccelData();

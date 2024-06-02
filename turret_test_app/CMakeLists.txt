@@ -26,19 +26,19 @@ endif()
 find_package(rclcpp REQUIRED)
 find_package(barsik_interfaces REQUIRED)
 
-file(GLOB SRCS
-     "src/*.cpp"
-)
+add_executable(get_angle_test "src/get_angle_test.cpp")
+ament_target_dependencies(get_angle_test rclcpp barsik_interfaces)
 
-file(GLOB HDRS
-     "include/*.h"
-)
+add_executable(set_angle_diff_test "src/set_angle_diff_test.cpp")
+ament_target_dependencies(set_angle_diff_test rclcpp barsik_interfaces)
 
-add_executable(${PROJECT_NAME} ${SRCS} ${HDRS})
-ament_target_dependencies(${PROJECT_NAME} rclcpp barsik_interfaces)
+add_executable(gun_test "src/gun_test.cpp")
+ament_target_dependencies(gun_test rclcpp barsik_interfaces)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-install(TARGETS ${PROJECT_NAME} DESTINATION lib/${PROJECT_NAME})
+install(TARGETS get_angle_test      DESTINATION lib/get_angle_test)
+install(TARGETS set_angle_diff_test DESTINATION lib/set_angle_diff_test)
+install(TARGETS gun_test            DESTINATION lib/gun_test)
 
 ament_package()
