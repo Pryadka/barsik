@@ -43,7 +43,7 @@ public:
     {
         auto angle_diff_callback =
             [this](barsik_interfaces::msg::SetAngleDiff::UniquePtr msg) -> void {
-                RCLCPP_INFO(this->get_logger(), "Angle diff: horizontal->%f, vertical->%f", msg->horizontal_diff, msg->vertical_diff);
+                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Angle diff: horizontal->%f, vertical->%f", msg->horizontal_diff, msg->vertical_diff);
                 m_orbi.SetAngelsMissmatch(msg->horizontal_diff, msg->vertical_diff);
             };
             
@@ -64,7 +64,7 @@ public:
       , m_orbi{orbi}
     {
         auto get_angle_callback = 
-            [this](const std::shared_ptr<barsik_interfaces::srv::GetAngle::Request> request,
+            [this](const std::shared_ptr<barsik_interfaces::srv::GetAngle::Request> /*request*/,
                          std::shared_ptr<barsik_interfaces::srv::GetAngle::Response> response) {
                 auto position = m_orbi.GetPosition();
                 response->horizontal = position[0];

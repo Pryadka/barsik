@@ -11,8 +11,11 @@
 
   <depend>rclcpp</depend>
   <depend>barsik_interfaces</depend>
-  <depend>turret_test_app</depend>
+  
   <depend>turret_controller</depend>
+  <depend>fisheye-controller</depend>
+  
+  <depend>turret_test_app</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

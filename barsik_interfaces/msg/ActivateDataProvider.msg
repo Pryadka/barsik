@@ -1,0 +1,2 @@
+bool fish_eye_camera_active
+bool high_resolution_camera_active
