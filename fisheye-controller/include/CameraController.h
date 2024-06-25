@@ -15,7 +15,7 @@ namespace camera_utility
   class CameraController
   {
   public:
-    CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height, rclcpp::Logger &logger);
+    CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height, const rclcpp::Logger &logger);
     ~CameraController();
 
     void Start(bool autoRestartFlag = true);
@@ -45,7 +45,7 @@ namespace camera_utility
 
     std::map<libcamera::Request *, void *> m_memoryRequestMaping;
 
-    rclcpp::Logger &m_logger;
+    const rclcpp::Logger &m_logger;
 
     void OnRequestComplete(libcamera::Request *request);
     void SetDefaultControls();

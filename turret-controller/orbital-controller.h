@@ -27,7 +27,7 @@ public:
 
 private:
     StepMotorController<5, 6, 5> m_horizontalMotor;
-    StepMotorController<19, 26, 5> m_verticalMotor;
+    StepMotorController<19, 26, 3> m_verticalMotor;
     imu::MPU_6050_Controller m_imu;
 
     Eigen::Vector2f m_position;

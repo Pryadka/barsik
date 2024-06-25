@@ -8,7 +8,8 @@
 namespace camera_utility
 {
 
-CameraController::CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height, rclcpp::Logger &logger) :
+CameraController::CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height,
+        const rclcpp::Logger &logger) :
   m_logger(logger) {
     m_cm.start();
 
@@ -18,8 +19,9 @@ CameraController::CameraController(const libcamera::PixelFormat &format, uint32_
         return;
     }
     
+    RCLCPP_INFO(m_logger, "Detected cameras:");
     for (auto i : camList) {
-        std::cout << "      " << i->id() << std::endl;
+        RCLCPP_INFO(m_logger, "      %s", i->id().c_str());
     }
     const std::string cameraId = camList[0]->id();
     m_camera = m_cm.get(cameraId);

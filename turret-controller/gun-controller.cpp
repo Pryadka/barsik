@@ -10,7 +10,7 @@ GunController::~GunController() {
 
 }
 
-void GunController::Shut(int n) {
+void GunController::Shut(int /*n*/) {
     m_gpio.Set(15, gpio::GPIO_Controller::LEVEL::HIGH);
 }
 
