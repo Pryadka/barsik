@@ -39,7 +39,7 @@ int main(int argc, char * argv[])
     DataProviderStatusPublisher statusSetter;
 
     bool a = true;
-    for(;;) {
+    while(true) {
         std::this_thread::sleep_for(1000ms);
         statusSetter.SetActiveStatus(a, false);
         a = !a;

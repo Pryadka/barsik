@@ -3,15 +3,18 @@
 namespace camera_utility
 {
     
-OpenCVFrameProcessor::OpenCVFrameProcessor(uint32_t width, uint32_t height):
-m_width(width), m_height(height) 
-{
+FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor() {
 }
 
-OpenCVFrameProcessor::~OpenCVFrameProcessor() {
+FlyingObjectDetectionFrameProcessor::~FlyingObjectDetectionFrameProcessor() {
 }
 
-void OpenCVFrameProcessor::ProcessFrame(uint8_t *address, uint32_t stride) {
+void FlyingObjectDetectionFrameProcessor::SetFrameSize(uint32_t width, uint32_t height) {
+    m_width = width;
+    m_height = height;
+}
+
+void FlyingObjectDetectionFrameProcessor::ProcessFrame(uint8_t *address, uint32_t stride) {
     cv::Mat image(m_height, m_width, CV_8UC3, address, stride);
 
     {
@@ -20,11 +23,11 @@ void OpenCVFrameProcessor::ProcessFrame(uint8_t *address, uint32_t stride) {
     }
 }
 
-bool OpenCVFrameProcessor::HasFrame() const {
+bool FlyingObjectDetectionFrameProcessor::HasFrame() const {
     return !m_frame.empty();
 }
 
-const cv::Mat OpenCVFrameProcessor::GetLatestFrame() {
+const cv::Mat FlyingObjectDetectionFrameProcessor::GetLatestFrame() {
     std::lock_guard<std::mutex> lock(m_mtx);
     if (!m_frame.empty()) {
         return m_frame;

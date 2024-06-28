@@ -12,10 +12,14 @@
 namespace camera_utility
 {
 
-  class CameraController
-  {
-  public:
-    CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height, const rclcpp::Logger &logger);
+class CameraController {
+public:
+    enum class Status : uint8_t {
+        NOT_READY = 0,
+        READY,
+    };
+    
+    CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height);
     ~CameraController();
 
     void Start(bool autoRestartFlag = true);
@@ -26,7 +30,9 @@ namespace camera_utility
 
     void SetActive(bool active);
 
-  private:
+    Status GetStatus() const {return m_status;}
+
+private:
     libcamera::CameraManager m_cm;
     std::shared_ptr<libcamera::Camera> m_camera;
     std::unique_ptr<libcamera::FrameBufferAllocator> m_allocator;
@@ -34,10 +40,12 @@ namespace camera_utility
     std::vector<std::unique_ptr<libcamera::Request>> m_requests;
     bool m_autoRestartFlag;
 
-    int m_receivedRequestsNumber = 0;
+    uint32_t m_width;
+    uint32_t m_height;
+    
+    Status m_status;
 
-    libcamera::Rectangle m_scalerCrop;
-    bool m_scalerCropChanged;
+    int m_receivedRequestsNumber = 0;
 
     std::vector<std::shared_ptr<FrameProcessingInterface>> m_processors;
     std::mutex m_procMutex;
@@ -45,13 +53,11 @@ namespace camera_utility
 
     std::map<libcamera::Request *, void *> m_memoryRequestMaping;
 
-    const rclcpp::Logger &m_logger;
-
     void OnRequestComplete(libcamera::Request *request);
     void SetDefaultControls();
 
-    std::ostream &Log() const { return std::cout; }
-  };
+    static const char s_cameraSensorName[];
+};
 
 } // camera_utility
 

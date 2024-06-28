@@ -8,22 +8,35 @@
 namespace camera_utility
 {
 
-CameraController::CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height,
-        const rclcpp::Logger &logger) :
-  m_logger(logger) {
+const char CameraController::s_cameraSensorName[] = "ov5647";
+
+CameraController::CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height) :
+    m_width{width}
+  , m_height(height)
+  , m_status{CameraController::Status::NOT_READY}
+{
     m_cm.start();
 
     const auto camList = m_cm.cameras();
     if (camList.empty()) {
-        RCLCPP_ERROR(m_logger, "Cant find active camera");
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Cant find active camera");
         return;
     }
-    
-    RCLCPP_INFO(m_logger, "Detected cameras:");
-    for (auto i : camList) {
-        RCLCPP_INFO(m_logger, "      %s", i->id().c_str());
+
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Detected cameras:");
+    int fisheye_number = -1;
+    for (size_t i = 0; i < camList.size(); i++) {
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "      %s", camList[i]->id().c_str());
+        auto pos = camList[i]->id().find(s_cameraSensorName);
+        if (pos != std::string::npos) {
+            fisheye_number = i;
+        }
     }
-    const std::string cameraId = camList[0]->id();
+    if (fisheye_number == -1) {
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to find fisheye camera");
+        return;
+    }
+    const std::string cameraId = camList[fisheye_number]->id();
     m_camera = m_cm.get(cameraId);
     m_camera->acquire();
 
@@ -31,7 +44,7 @@ CameraController::CameraController(const libcamera::PixelFormat &format, uint32_
         m_camera->generateConfiguration({libcamera::StreamRole::Raw});
 
     if (configs->empty()) {
-        RCLCPP_ERROR(m_logger, "Empty camera config");
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Empty camera config");
         m_camera.reset();
         return;
     }
@@ -43,7 +56,7 @@ CameraController::CameraController(const libcamera::PixelFormat &format, uint32_
     config.bufferCount = 1;
 
     if (configs->validate() == libcamera::CameraConfiguration::Status::Invalid) {
-        RCLCPP_ERROR(m_logger, "Wrong config");
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Wrong config");
         m_camera.reset();
         return;
     }
@@ -54,7 +67,7 @@ CameraController::CameraController(const libcamera::PixelFormat &format, uint32_
 
     int ret = m_allocator->allocate(config.stream());
     if (ret < 0) {
-        RCLCPP_ERROR(m_logger, "Can't allocate buffers");
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Can't allocate buffers");
         m_camera.reset();
         return;
     }
@@ -62,30 +75,36 @@ CameraController::CameraController(const libcamera::PixelFormat &format, uint32_
     m_stream = config.stream();
     const std::vector<std::unique_ptr<libcamera::FrameBuffer>> &buffers = m_allocator->buffers(m_stream);
     if (buffers.size() != config.bufferCount) {
-        RCLCPP_ERROR(m_logger, "Wrong buffers number");
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Wrong buffers number");
     }
 
     for (unsigned int i = 0; i < config.bufferCount; i++) {
         m_requests.emplace_back(m_camera->createRequest());
         if (!m_requests[i]) {
-            RCLCPP_ERROR(m_logger, "Can't create request");
+            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Can't create request");
             m_camera.reset();
             return;
         }
 
         auto ret = m_requests[i]->addBuffer(m_stream, buffers[i].get());
         if (ret < 0) {
-            RCLCPP_ERROR(m_logger, "Can't set buffer for request");
+            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Can't set buffer for request");
             m_camera.reset();
             return;
         }
     }
 
+    SetDefaultControls();
+
     m_camera->requestCompleted.connect(this, &CameraController::OnRequestComplete);
     ret = m_camera->start();
     if (ret < 0) {
-        RCLCPP_ERROR(m_logger, "Can't start camera");
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Can't start camera");
+        return;
     }
+
+    m_status = CameraController::Status::READY;
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Camera initialization is done");
 }
 
 CameraController::~CameraController() {
@@ -103,11 +122,10 @@ CameraController::~CameraController() {
 
 void CameraController::Start(bool autoRestartFlag) {
     std::lock_guard<std::mutex> fence{m_startRequestFence};
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Starting. N requsts=%lu", m_requests.size());
     m_autoRestartFlag = autoRestartFlag;
     for (const auto &req : m_requests) {
-        if (req->status() != libcamera::Request::RequestPending) {
-            m_camera->queueRequest(req.get());
-        }
+        m_camera->queueRequest(req.get());
     }
 }
 
@@ -122,6 +140,7 @@ void CameraController::SetDefaultControls() {
 void CameraController::AddProcessor(std::shared_ptr<FrameProcessingInterface> proc) {
     std::lock_guard<std::mutex> lck{m_procMutex};
     m_processors.emplace_back(proc);
+    proc->SetFrameSize(m_width, m_height);
 }
 
 void CameraController::OnRequestComplete(libcamera::Request *request) {

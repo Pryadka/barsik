@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 project(fisheye-controller)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 set (CMAKE_CXX_STANDARD 20)
@@ -29,8 +29,6 @@ target_link_libraries(${PROJECT_NAME}
     libcamera.so
     libcamera-base.so
 )
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_include_directories(${PROJECT_NAME} PUBLIC /usr/local/include/libcamera)
 target_include_directories(${PROJECT_NAME} PUBLIC /usr/include/libcamera)
