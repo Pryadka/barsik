@@ -1,5 +1,7 @@
 #include "orbital-controller.h"
-#include <math.h>  
+#include <math.h>
+#include "rclcpp/rclcpp.hpp"
+
 
 namespace turret
 {
@@ -9,8 +11,8 @@ OrbitalController::OrbitalController(gpio::GPIO_Controller &gpio):
     m_verticalMotor(gpio),
     m_position{0.f, 0.f}
 {
-    if (!m_imu.UploadOffsetsFromFile("mpu6050.data")) {
-        std::cout << "Failed to upload imu data" << std::endl;
+    if (!m_imu.UploadOffsetsFromFile("/home/sasa-r/src/barsik/mpu6050.data")) {
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Failed to upload imu data");
     }
 
     // skip first measurement because they are wrong
@@ -44,21 +46,23 @@ void OrbitalController::SetAngelsMissmatch(float horizontal, float vertical) {
 void OrbitalController::GoToBasePosition() {
     using namespace std::chrono_literals;
     constexpr double PI = 3.14159265;
-
-    m_verticalMotor.SetSpeed(20.f);
+    
+    m_verticalMotor.SetSpeed(40.f);
     constexpr int averageCycleNumber = 100;
     for (int i = 0; i < averageCycleNumber; i++) {
         auto accelData = m_imu.GetAccelData();
-        //std::cout <<  "a=" << accelData[0] <<  ", b=" << accelData[1] <<  ", c=" << accelData[2] << std::endl;
+        std::cout <<  "a=" << accelData[0] <<  ", b=" << accelData[1] <<  ", c=" << accelData[2] << std::endl;
 
-        auto angleDiff = -std::asin(accelData[0]) * 180.0 / PI;
+        auto angleDiff = -std::asin(std::clamp(accelData[0], -1.f, 1.f)) * 180.0 / PI;
 
-        std::cout << "AngleDiff=" << angleDiff << std::endl;
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "AngleDiff=%f", angleDiff);
         auto absAngleDiff = std::abs(angleDiff);
         if (absAngleDiff < 0.5f) break;
-        if (absAngleDiff < 10.f) m_verticalMotor.SetSpeed(absAngleDiff);
+        if (absAngleDiff < 10.f) m_verticalMotor.SetSpeed(angleDiff);
 
-        m_verticalMotor.SetAngleInGrad(m_verticalMotor.GetAngleInGrad() + angleDiff);
+        m_verticalMotor.SetZeroPosition();
+
+        m_verticalMotor.SetAngleInGrad(angleDiff);
         std::this_thread::sleep_for(100ms);
     }
 
@@ -67,7 +71,7 @@ void OrbitalController::GoToBasePosition() {
 }
 
 void OrbitalController::Calibrate() {
-    m_imu.CalibrateAndWriteOffsetsToFile("mpu6050.data");
+    m_imu.CalibrateAndWriteOffsetsToFile("/home/sasa-r/src/barsik/mpu6050.data");
 }
 
 float OrbitalController::ConstrainAngle(float angle)

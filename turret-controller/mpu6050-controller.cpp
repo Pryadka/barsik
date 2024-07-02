@@ -1,18 +1,17 @@
 #include "mpu6050-controller.h"
 
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include <fstream>
+#include "rclcpp/rclcpp.hpp"
+
 
 namespace imu
 {
 using namespace std::chrono_literals;
 
-bool MPU_6050_Controller::AutoCalibration()
-{
+bool MPU_6050_Controller::AutoCalibration() {
     bool gyroStop = false, accelStop = false;
-
     
     Eigen::Vector3i gyroOffset;
     Eigen::Vector3i accelOffset;
@@ -22,15 +21,11 @@ bool MPU_6050_Controller::AutoCalibration()
     while((i++ < 100) && (!gyroStop || !accelStop)) {
         if (!gyroStop) {
             auto g_d = GetGyroDataRaw();
-            std::cout << "GYRO=" << g_d << std::endl;
             if (abs(g_d(0)) < k_auto_calibration_gyro_limit
                 && abs(g_d(1)) < k_auto_calibration_gyro_limit
-                && abs(g_d(2)) < k_auto_calibration_gyro_limit)
-            {
+                && abs(g_d(2)) < k_auto_calibration_gyro_limit) {
                 gyroStop = true;
-            }
-            else
-            {
+            } else {
                 g_d /= 8;
                 gyroOffset -= g_d;
             }
@@ -41,12 +36,9 @@ bool MPU_6050_Controller::AutoCalibration()
             a_d(2) = a_d(2) - k_accel_LSB;
             if (abs(a_d(0)) < k_auto_calibration_accel_limit
                 && abs(a_d(1)) < k_auto_calibration_accel_limit
-                && abs(a_d(2)) < k_auto_calibration_accel_limit)
-            {
+                && abs(a_d(2)) < k_auto_calibration_accel_limit) {
                 accelStop = true;
-            }
-            else
-            {
+            } else {
                 a_d /= 8;
                 accelOffset -= a_d;
             }
@@ -63,7 +55,7 @@ MPU_6050_Controller::MPU_6050_Controller(unsigned int address)
 {
     m_i2c_handle = lgI2cOpen(1, address, 0);
     if (m_i2c_handle < 0) {
-        std::cout << "Error openning i2c device" << std::endl;
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Error openning i2c device");
     } else {
         lgI2cWriteByteData(m_i2c_handle, 0x6b, 0x00); // wake up
         lgI2cWriteByteData(m_i2c_handle, 0x1a, 0x03); // digital low pass filter Acc=44Hz(4.9ms), Gyro=42Hz(4.8ms)
@@ -84,8 +76,7 @@ MPU_6050_Controller::~MPU_6050_Controller() {
     }
 }
 
-void MPU_6050_Controller::SetOffsets(const Eigen::Vector3i &accelOffset, const Eigen::Vector3i &gyroOffset)
-{
+void MPU_6050_Controller::SetOffsets(const Eigen::Vector3i &accelOffset, const Eigen::Vector3i &gyroOffset) {
     // offsets
     // accelerometer
     // 1.Reset
@@ -116,8 +107,7 @@ void MPU_6050_Controller::SetOffsets(const Eigen::Vector3i &accelOffset, const E
     WriteInt16ToRegisters(0x17, gyroOffset[2]); // z
 }
 
-Eigen::Vector3i MPU_6050_Controller::ReadAccelOffsets()
-{
+Eigen::Vector3i MPU_6050_Controller::ReadAccelOffsets() {
     return Eigen::Vector3i{
         ReadInt16FromRegisters(0x06),
         ReadInt16FromRegisters(0x08),
@@ -125,8 +115,7 @@ Eigen::Vector3i MPU_6050_Controller::ReadAccelOffsets()
     };
 }
 
-Eigen::Vector3i MPU_6050_Controller::ReadGyroOffsets()
-{
+Eigen::Vector3i MPU_6050_Controller::ReadGyroOffsets() {
     return Eigen::Vector3i{
         ReadInt16FromRegisters(0x13),
         ReadInt16FromRegisters(0x15),
@@ -134,8 +123,7 @@ Eigen::Vector3i MPU_6050_Controller::ReadGyroOffsets()
     };
 }
 
-Eigen::Vector3i MPU_6050_Controller::GetAccelDataRaw()
-{
+Eigen::Vector3i MPU_6050_Controller::GetAccelDataRaw() {
     Eigen::Vector3i rawData(
         ReadInt16FromRegisters(0x3b),
         ReadInt16FromRegisters(0x3d),
@@ -144,8 +132,7 @@ Eigen::Vector3i MPU_6050_Controller::GetAccelDataRaw()
     return rawData;
 }
 
-Eigen::Vector3f MPU_6050_Controller::GetAccelData()
-{
+Eigen::Vector3f MPU_6050_Controller::GetAccelData() {
     Eigen::Vector3f res;
 
     res = GetAccelDataRaw().cast<float>() * k_accel_sens;
@@ -153,8 +140,7 @@ Eigen::Vector3f MPU_6050_Controller::GetAccelData()
     return res;
 }
 
-Eigen::Vector3f MPU_6050_Controller::GetGyroData()
-{
+Eigen::Vector3f MPU_6050_Controller::GetGyroData() {
     Eigen::Vector3f res;
 
     res = GetGyroDataRaw().cast<float>() * k_gyro_sens;
@@ -162,8 +148,7 @@ Eigen::Vector3f MPU_6050_Controller::GetGyroData()
     return res;
 }
 
-Eigen::Vector3i MPU_6050_Controller::GetGyroDataRaw()
-{
+Eigen::Vector3i MPU_6050_Controller::GetGyroDataRaw() {
     Eigen::Vector3i rawData(
         ReadInt16FromRegisters(0x43),
         ReadInt16FromRegisters(0x45),
@@ -172,15 +157,13 @@ Eigen::Vector3i MPU_6050_Controller::GetGyroDataRaw()
     return rawData;
 }
 
-float MPU_6050_Controller::GetTemp()
-{
+float MPU_6050_Controller::GetTemp() {
     const int16_t temp_out = lgI2cReadByteData(m_i2c_handle, 0x41) << 8 | lgI2cReadByteData(m_i2c_handle, 0x42);
 
     return temp_out / 340. + 36.53;
 }
 
-bool MPU_6050_Controller::CalibrateAndWriteOffsetsToFile(const char *path)
-{
+bool MPU_6050_Controller::CalibrateAndWriteOffsetsToFile(const char *path) {
     auto res = AutoCalibration();
     auto accelOffset = ReadAccelOffsets();
     auto gyroOffset = ReadGyroOffsets();
@@ -203,8 +186,7 @@ bool MPU_6050_Controller::CalibrateAndWriteOffsetsToFile(const char *path)
     return res;
 }
 
-bool MPU_6050_Controller::UploadOffsetsFromFile(const char *path)
-{
+bool MPU_6050_Controller::UploadOffsetsFromFile(const char *path) {
     bool res = false;
     std::ifstream input{path};
     Eigen::Vector3i accelOffset, gyroOffset;
@@ -216,7 +198,7 @@ bool MPU_6050_Controller::UploadOffsetsFromFile(const char *path)
             
         for (int i = 0; i < 3; i++) {
             input >> gyroOffset[i];
-        };
+        }
         res = input.good();
         input.close();
         SetOffsets(accelOffset, gyroOffset);
@@ -224,8 +206,7 @@ bool MPU_6050_Controller::UploadOffsetsFromFile(const char *path)
     return res;
 }
 
-int16_t MPU_6050_Controller::ReadInt16FromRegisters(int reg)
-{
+int16_t MPU_6050_Controller::ReadInt16FromRegisters(int reg) {
     int16_t res;
     char b1 = lgI2cReadByteData(m_i2c_handle, reg);
     char b2 = lgI2cReadByteData(m_i2c_handle, reg + 1);
@@ -233,8 +214,7 @@ int16_t MPU_6050_Controller::ReadInt16FromRegisters(int reg)
     return res;
 }
 
-void MPU_6050_Controller::WriteInt16ToRegisters(int reg, int16_t data)
-{
+void MPU_6050_Controller::WriteInt16ToRegisters(int reg, int16_t data) {
     lgI2cWriteByteData(m_i2c_handle, reg, 0xff & (data >> 8)); // high
     lgI2cWriteByteData(m_i2c_handle, reg + 1, 0xff & data); // low
 }

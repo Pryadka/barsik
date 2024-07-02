@@ -35,3 +35,6 @@
 **/install
 **/log
 **/.vscode
+
+# Data from cameras
+**/images
