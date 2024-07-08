@@ -40,7 +40,7 @@ int main(int argc, char * argv[])
 
     bool a = true;
     while(true) {
-        std::this_thread::sleep_for(1000ms);
+        std::this_thread::sleep_for(200ms);
         statusSetter.SetActiveStatus(a, false);
         a = !a;
     }

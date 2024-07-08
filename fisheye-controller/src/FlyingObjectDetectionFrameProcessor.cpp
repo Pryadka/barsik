@@ -16,10 +16,11 @@ void FlyingObjectDetectionFrameProcessor::SetFrameSize(uint32_t width, uint32_t 
 
 void FlyingObjectDetectionFrameProcessor::ProcessFrame(uint8_t *address, uint32_t stride) {
     cv::Mat image(m_height, m_width, CV_8UC3, address, stride);
-
+    cv::Mat gray;
+	cvtColor(image, gray, cv::COLOR_RGB2GRAY);
     {
         std::lock_guard<std::mutex> lock(m_mtx);
-        m_frame = image.clone();
+        m_frame = gray;
     }
 }
 

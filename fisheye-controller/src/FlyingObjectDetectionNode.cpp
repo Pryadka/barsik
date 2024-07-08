@@ -3,7 +3,7 @@
 
 FlyingObjectDetectionNode::FlyingObjectDetectionNode() :
     rclcpp::Node{"flying_object_detector"}
-  , m_cameraController{libcamera::formats::RGB888, 1296, 972} {
+  , m_cameraController{libcamera::formats::RGB888, 1280, 1280} {
 
     if (m_cameraController.GetStatus() != camera_utility::CameraController::Status::READY) {
         RCLCPP_FATAL(rclcpp::get_logger("rclcpp"), "Fisheye camera is not reday");
