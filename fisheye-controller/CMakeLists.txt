@@ -19,9 +19,10 @@ find_package(ament_cmake REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(barsik_interfaces REQUIRED)
+find_package(edgetpu-nn-lib REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SRCS} ${HDRS})
-ament_target_dependencies(${PROJECT_NAME} rclcpp barsik_interfaces)
+ament_target_dependencies(${PROJECT_NAME} rclcpp barsik_interfaces edgetpu-nn-lib)
 
 include_directories(${OpenCV_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}
