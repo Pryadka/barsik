@@ -25,6 +25,7 @@ endif()
 add_subdirectory("${TENSORFLOW_SOURCE_DIR}/tensorflow/lite"  "${CMAKE_CURRENT_BINARY_DIR}/tensorflow-lite" EXCLUDE_FROM_ALL)
 
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS} include)
