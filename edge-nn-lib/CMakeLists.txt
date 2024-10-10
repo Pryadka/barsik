@@ -12,7 +12,7 @@ file(GLOB HDRS
      "include/*.h"
 )
 
-add_library(${PROJECT_NAME} STATIC ${SRCS} ${HDRS})
+add_library(${PROJECT_NAME} SHARED ${SRCS} ${HDRS})
 
 # set your own path
 set(TENSORFLOW_SOURCE_DIR "/home/sasa-r/src/tensorflow")
@@ -29,24 +29,33 @@ find_package(rclcpp REQUIRED)
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS} include)
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
-# ament_export_targets(${PROJECT_NAME} HAS_LIBRARY_TARGET)
+ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
+# ament_export_dependencies(tensorflow-lite)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${OpenCV_LIBS}
-    libedgetpu.so
-    tensorflow-lite
+target_link_libraries(${PROJECT_NAME} 
+    PRIVATE ${OpenCV_LIBS}
+    PRIVATE libedgetpu.so
+    PRIVATE tensorflow-lite
 )
 
 install(
-    DIRECTORY include
-    DESTINATION ${PROJECT_NAME}
+  DIRECTORY include/
+  DESTINATION include
 )
 
 install(
   TARGETS ${PROJECT_NAME}
-  EXPORT  ${PROJECT_NAME}
+  EXPORT  export_${PROJECT_NAME}
   LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
 )
 
+ament_export_include_directories(include)
 ament_package()

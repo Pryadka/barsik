@@ -12,7 +12,7 @@ namespace barsik_cv {
 class EdgeTpu_DetectorBase {
 public:
     EdgeTpu_DetectorBase(size_t pcie_device_number, const std::string_view path_to_tflite_model);
-    ~EdgeTpu_DetectorBase();
+    ~EdgeTpu_DetectorBase(){}
 
     enum class Status: uint8_t {
         Ready = 0,

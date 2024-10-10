@@ -13,6 +13,7 @@ set(msg_files
   "msg/Fire.msg"
   "msg/SetAngleDiff.msg"
   "msg/ActivateDataProvider.msg"
+  "msg/FisheyeStatus.msg"
 )
 
 set(srv_files

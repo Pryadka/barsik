@@ -3,7 +3,11 @@
 namespace camera_utility
 {
     
-FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor() {
+FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor(
+    rclcpp::Publisher<barsik_interfaces::msg::FisheyeStatus>::SharedPtr publisher) :
+    m_detector(0, "/home/sasa-r/src/barsik/fisheye_detector_quant_edgetpu.tflite")
+  , m_publisher(publisher)
+{
 }
 
 FlyingObjectDetectionFrameProcessor::~FlyingObjectDetectionFrameProcessor() {
@@ -16,8 +20,6 @@ void FlyingObjectDetectionFrameProcessor::SetFrameSize(uint32_t width, uint32_t 
 
 void FlyingObjectDetectionFrameProcessor::ProcessFrame(uint8_t *address, uint32_t stride) {
     cv::Mat image(m_height, m_width, CV_8UC3, address, stride);
-    // cv::Mat gray;
-	// cvtColor(image, gray, cv::COLOR_RGB2GRAY);
     {
         std::lock_guard<std::mutex> lock(m_mtx);
         m_frame = image.clone();

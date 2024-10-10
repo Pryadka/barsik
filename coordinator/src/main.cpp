@@ -3,6 +3,7 @@
 #include "barsik_interfaces/srv/get_angle.hpp"
 #include "barsik_interfaces/msg/set_angle_diff.hpp"
 #include "barsik_interfaces/msg/activate_data_provider.hpp"
+#include "barsik_interfaces/msg/fisheye_status.hpp"
 
 #include <thread>
 #include <chrono>
