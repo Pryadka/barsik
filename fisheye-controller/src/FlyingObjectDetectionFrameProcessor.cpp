@@ -3,11 +3,31 @@
 namespace camera_utility
 {
     
-FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor(
+FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor(int width, int height,
     rclcpp::Publisher<barsik_interfaces::msg::FisheyeStatus>::SharedPtr publisher) :
-    m_detector(0, "/home/sasa-r/src/barsik/fisheye_detector_quant_edgetpu.tflite")
+    m_width(width)
+  , m_height(height)
+  , m_detector(0, "/home/sasa-r/src/barsik/fisheye_detector_quant_edgetpu.tflite")
   , m_publisher(publisher)
+  , m_waitForFrameSemaphore(0)
 {
+    m_mask = cv::Mat::zeros(cv::Size(m_width, m_height), CV_8UC3);
+    cv::circle(m_mask, cv::Point(m_width/2, m_height/2), 590, cv::Scalar(255,255,255), -1, 8, 0);
+
+    m_detectionThread = std::thread([this](){
+        while(true) {
+            m_waitForFrameSemaphore.acquire();
+            {
+                std::lock_guard<std::mutex> lock(m_mtx);
+                const auto res = m_detector.ExecuteInference(m_frame.data);
+                if (res != -1) {
+                    barsik_interfaces::msg::FisheyeStatus msg;
+                    msg.set__detection(static_cast<uint8_t>(res));
+                    m_publisher->publish(msg);
+                }
+            }
+        }
+    });
 }
 
 FlyingObjectDetectionFrameProcessor::~FlyingObjectDetectionFrameProcessor() {
@@ -22,8 +42,9 @@ void FlyingObjectDetectionFrameProcessor::ProcessFrame(uint8_t *address, uint32_
     cv::Mat image(m_height, m_width, CV_8UC3, address, stride);
     {
         std::lock_guard<std::mutex> lock(m_mtx);
-        m_frame = image.clone();
+        image.copyTo(m_frame, m_mask);
     }
+    m_waitForFrameSemaphore.release();
 }
 
 bool FlyingObjectDetectionFrameProcessor::HasFrame() const {

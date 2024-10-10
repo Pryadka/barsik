@@ -12,7 +12,7 @@ FlyingObjectDetectionNode::FlyingObjectDetectionNode() :
     }
     m_cameraController.Start(true);
 
-    m_frameProcessor = std::make_shared<camera_utility::FlyingObjectDetectionFrameProcessor>(m_fisheyeStatusPublisher);
+    m_frameProcessor = std::make_shared<camera_utility::FlyingObjectDetectionFrameProcessor>(1280, 1280, m_fisheyeStatusPublisher);
 
     m_cameraController.AddProcessor(m_frameProcessor);
 

@@ -8,7 +8,7 @@
 namespace camera_utility
 {
 
-const char CameraController::s_cameraSensorName[] = "ov5647";
+const char CameraController::s_cameraSensorName[] = "arducam-64mp";
 
 CameraController::CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height) :
     m_width{width}

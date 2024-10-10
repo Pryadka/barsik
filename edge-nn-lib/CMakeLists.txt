@@ -35,12 +35,12 @@ target_include_directories(${PROJECT_NAME}
     $<INSTALL_INTERFACE:include>)
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-# ament_export_dependencies(tensorflow-lite)
 
 target_link_libraries(${PROJECT_NAME} 
     PRIVATE ${OpenCV_LIBS}
     PRIVATE libedgetpu.so
     PRIVATE tensorflow-lite
+    # rclcpp
 )
 
 install(

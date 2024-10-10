@@ -10,6 +10,38 @@
 
 using namespace std::chrono_literals;
 
+class FlyingObjectProcessNode : public rclcpp::Node
+{
+public:
+    FlyingObjectProcessNode();
+    ~FlyingObjectProcessNode();
+
+private:
+    rclcpp::Subscription<barsik_interfaces::msg::FisheyeStatus>::SharedPtr m_message_subscription;
+};
+
+FlyingObjectProcessNode::FlyingObjectProcessNode() :
+    rclcpp::Node{"flying_object_processor"}
+{
+    auto process_message_callback =
+        [this](barsik_interfaces::msg::FisheyeStatus::UniquePtr msg) -> void {
+            if (msg->detection == 11) {
+                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fish eye nothing");
+            } else {
+                RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fish eye sector detected %d", msg->detection);
+            }
+        };
+
+    m_message_subscription =
+        create_subscription<barsik_interfaces::msg::FisheyeStatus>("fisheye_status", 10, process_message_callback);
+}
+
+FlyingObjectProcessNode::~FlyingObjectProcessNode() {
+
+}
+
+////////////////////////////////////////////////////////////////
+
 class DataProviderStatusPublisher : public rclcpp::Node
 {
 public:
@@ -38,13 +70,12 @@ int main(int argc, char * argv[])
     rclcpp::init(argc, argv);
 
     DataProviderStatusPublisher statusSetter;
+    statusSetter.SetActiveStatus(true, false);
 
-    bool a = true;
-    while(true) {
-        std::this_thread::sleep_for(200ms);
-        statusSetter.SetActiveStatus(a, false);
-        a = !a;
-    }
+    auto fisheye_detector_reciever = std::make_shared<FlyingObjectProcessNode>();
+
+    rclcpp::spin(fisheye_detector_reciever);
+    rclcpp::shutdown();
 
     // gpio::GPIO_Controller gpio_controller;
 

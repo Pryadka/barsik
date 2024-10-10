@@ -15,6 +15,11 @@ def generate_launch_description():
             name='fish'
         ),
         Node(
+            package='eagle-eye-controller',
+            executable='eagle-eye-controller',
+            name='eagle'
+        ),
+        Node(
             package='coordinator',
             executable='coordinator',
             name='coordinator'
