@@ -1,1 +1,2 @@
 uint8 detection
+float32 probability

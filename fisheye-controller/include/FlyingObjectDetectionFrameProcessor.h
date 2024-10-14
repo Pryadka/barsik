@@ -36,6 +36,7 @@ private:
     rclcpp::Publisher<barsik_interfaces::msg::FisheyeStatus>::SharedPtr m_publisher;
 
     std::thread m_detectionThread;
+    bool m_run = true;
     mutable std::mutex m_mtx;
     mutable std::binary_semaphore m_waitForFrameSemaphore;
 };

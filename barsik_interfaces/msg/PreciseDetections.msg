@@ -1,0 +1,1 @@
+barsik_interfaces/Detection[] objects

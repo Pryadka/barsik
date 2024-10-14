@@ -19,14 +19,13 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(barsik_interfaces REQUIRED)
 
+include_directories(${OpenCV_INCLUDE_DIRS} include)
+
 add_executable(${PROJECT_NAME} ${SRCS} ${HDRS})
 ament_target_dependencies(${PROJECT_NAME} rclcpp barsik_interfaces)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

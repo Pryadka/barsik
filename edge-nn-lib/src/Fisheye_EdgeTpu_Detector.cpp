@@ -9,11 +9,11 @@ Fisheye_EdgeTpu_Detector::Fisheye_EdgeTpu_Detector(
 {
 }
 
-int Fisheye_EdgeTpu_Detector::ExecuteInference(const uint8_t *data) {
+std::pair<int, float> Fisheye_EdgeTpu_Detector::ExecuteInference(const uint8_t *data) {
     auto *input = m_interpreter->typed_input_tensor<uint8_t>(0);
     if (input == nullptr) {
 	    std::cerr << "Failed to get input tensor" << std::endl;
-	    return -1;
+	    return {-1, 0.f};
     }
 
     const size_t img_size = IMAGE_HEIGHT*IMAGE_WIDTH*IMAGE_CHANELS;
@@ -26,14 +26,13 @@ int Fisheye_EdgeTpu_Detector::ExecuteInference(const uint8_t *data) {
     const auto *const output = m_interpreter->typed_output_tensor<uint8_t>(0);
     const uint8_t *const out = (const uint8_t*const)output;
 
-    float highScore = 0.f;
-    int res = -1;
+    std::pair<int, float> res{-1, 0.f};
     for (int i = 0; i < 12; i++) {
         float t = (out[i] - m_outputOffset) * m_outputScale;
-        std::cout << "t=" << t << std::endl;
-        if (t > highScore) {
-            highScore = t;
-            res = i;
+//        std::cout << "t=" << t << std::endl;
+        if (t > res.second) {
+            res.second = t;
+            res.first = i;
         }
     }
 

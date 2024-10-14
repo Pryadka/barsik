@@ -12,17 +12,21 @@
 namespace camera_utility
 {
 
-class CameraController {
+class PreciseCameraController {
 public:
     enum class Status : uint8_t {
         NOT_READY = 0,
         READY,
     };
     
-    CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height);
-    ~CameraController();
+    PreciseCameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height);
+    ~PreciseCameraController();
 
     void Start(bool autoRestartFlag = true);
+    
+    void SetViewPort(uint32_t center_X, uint32_t center_Y, uint32_t width, uint32_t height);
+    void SetViewPortOrigin(uint32_t center_X, uint32_t center_Y);
+    void SetViewPortSize(uint32_t width, uint32_t height);
 
     void AddProcessor(std::shared_ptr<FrameProcessingInterface> proc);
 
@@ -31,6 +35,9 @@ public:
     void SetActive(bool active);
 
     Status GetStatus() const {return m_status;}
+
+    static constexpr size_t k_matrixWidth = 9152;
+    static constexpr size_t k_matrixHeight = 6944;
 
 private:
     libcamera::CameraManager m_cm;
@@ -42,6 +49,9 @@ private:
 
     uint32_t m_width;
     uint32_t m_height;
+
+    libcamera::Rectangle m_scalerCrop;
+    bool m_scalerCropChanged;
     
     Status m_status;
 
@@ -55,6 +65,10 @@ private:
 
     void OnRequestComplete(libcamera::Request *request);
     void SetDefaultControls();
+
+    static bool CheckViewPort(const libcamera::Rectangle &rect);
+
+    void ValidateScalerCrop(libcamera::Request *request);
 
     static const char s_cameraSensorName[];
 };

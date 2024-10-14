@@ -1,0 +1,2 @@
+bool precise
+bool fisheye

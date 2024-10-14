@@ -16,6 +16,8 @@ FlyingObjectDetectionNode::FlyingObjectDetectionNode() :
 
     m_cameraController.AddProcessor(m_frameProcessor);
 
+    m_saveFrames = true;
+
     if (m_saveFrames) {
         auto now = std::chrono::system_clock::now();
         auto seconds_since_epoch =
@@ -43,7 +45,18 @@ FlyingObjectDetectionNode::FlyingObjectDetectionNode() :
     m_activation_subscription =
         create_subscription<barsik_interfaces::msg::ActivateDataProvider>("video_provider_activation", 10, activation_callback);
 
-  //  m_cameraController.Start(true);
+    auto save_current_frame_callback =
+        [this](barsik_interfaces::msg::DebugSaveCurrentImage::UniquePtr msg) -> void {
+            if (msg->fisheye == true) {
+                if (m_frameProcessor->HasFrame()) {
+                    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Saving image %lu", m_imageNumber);
+                    SaveImage(m_frameProcessor->GetLatestFrame());
+                }
+            }
+        };
+
+    m_save_current_frame_subscription =
+        create_subscription<barsik_interfaces::msg::DebugSaveCurrentImage>("video_save_frame", 10, save_current_frame_callback);
 }
 
 FlyingObjectDetectionNode::~FlyingObjectDetectionNode() {

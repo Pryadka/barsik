@@ -14,6 +14,9 @@ set(msg_files
   "msg/SetAngleDiff.msg"
   "msg/ActivateDataProvider.msg"
   "msg/FisheyeStatus.msg"
+  "msg/DebugSaveCurrentImage.msg"
+  "msg/Detection.msg"
+  "msg/PreciseDetections.msg"
 )
 
 set(srv_files

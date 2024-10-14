@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstring>
 #include <chrono>
+#include <utility>
 
 #include "EdgeTpu_DetectorBase.h"
 
@@ -16,7 +17,7 @@ public:
     Fisheye_EdgeTpu_Detector(size_t pcie_device_number, const std::string_view path_to_tflite_model);
     ~Fisheye_EdgeTpu_Detector(){}
 
-    int ExecuteInference(const uint8_t *data);
+    std::pair<int, float> ExecuteInference(const uint8_t *data);
 
 private:
     static constexpr int IMAGE_HEIGHT = 1280;

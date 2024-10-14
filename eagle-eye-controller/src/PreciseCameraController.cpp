@@ -1,4 +1,4 @@
-#include "CameraController.h"
+#include "PreciseCameraController.h"
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -8,12 +8,13 @@
 namespace camera_utility
 {
 
-const char CameraController::s_cameraSensorName[] = "arducam-64mp";
+const char PreciseCameraController::s_cameraSensorName[] = "arducam_64mp";
 
-CameraController::CameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height) :
+PreciseCameraController::PreciseCameraController(const libcamera::PixelFormat &format, uint32_t width, uint32_t height) :
     m_width{width}
-  , m_height(height)
-  , m_status{CameraController::Status::NOT_READY}
+  , m_height{height}
+  , m_scalerCropChanged{false}
+  , m_status{PreciseCameraController::Status::NOT_READY}
 {
     m_cm.start();
 
@@ -33,7 +34,7 @@ CameraController::CameraController(const libcamera::PixelFormat &format, uint32_
         }
     }
     if (eagle_number == -1) {
-        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to find fisheye camera");
+        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to find high resulution camera");
         return;
     }
     const std::string cameraId = camList[eagle_number]->id();
@@ -96,18 +97,18 @@ CameraController::CameraController(const libcamera::PixelFormat &format, uint32_
 
     SetDefaultControls();
 
-    m_camera->requestCompleted.connect(this, &CameraController::OnRequestComplete);
+    m_camera->requestCompleted.connect(this, &PreciseCameraController::OnRequestComplete);
     ret = m_camera->start();
     if (ret < 0) {
         RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Can't start camera");
         return;
     }
 
-    m_status = CameraController::Status::READY;
+    m_status = PreciseCameraController::Status::READY;
     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Camera initialization is done");
 }
 
-CameraController::~CameraController() {
+PreciseCameraController::~PreciseCameraController() {
     m_autoRestartFlag = false;
     if (m_camera) {
         m_camera->stop();
@@ -120,7 +121,7 @@ CameraController::~CameraController() {
     m_cm.stop();
 }
 
-void CameraController::Start(bool autoRestartFlag) {
+void PreciseCameraController::Start(bool autoRestartFlag) {
     std::lock_guard<std::mutex> fence{m_startRequestFence};
     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Starting. N requsts=%lu", m_requests.size());
     m_autoRestartFlag = autoRestartFlag;
@@ -129,7 +130,7 @@ void CameraController::Start(bool autoRestartFlag) {
     }
 }
 
-void CameraController::SetDefaultControls() {
+void PreciseCameraController::SetDefaultControls() {
     for (const auto &req : m_requests) {
         libcamera::ControlList &controls = req->controls();
         controls.set(libcamera::controls::AeEnable, true);
@@ -137,13 +138,59 @@ void CameraController::SetDefaultControls() {
     }
 }
 
-void CameraController::AddProcessor(std::shared_ptr<FrameProcessingInterface> proc) {
+void PreciseCameraController::SetViewPort(uint32_t center_X, uint32_t center_Y, uint32_t width, uint32_t height)
+{
+    libcamera::Rectangle scalerCrop(center_X - width/2, center_Y - height/2, width, height);
+    if (CheckViewPort(scalerCrop))
+    {
+        m_scalerCrop = scalerCrop;
+        m_scalerCropChanged = true;
+    }
+}
+
+void PreciseCameraController::SetViewPortOrigin(uint32_t center_X, uint32_t center_Y) {
+    auto newScalerCrop = m_scalerCrop;
+    newScalerCrop.x = center_X - m_scalerCrop.width / 2;
+    newScalerCrop.y = center_Y - m_scalerCrop.height / 2;
+    if (CheckViewPort(newScalerCrop))
+    {
+        m_scalerCrop = newScalerCrop;
+        m_scalerCropChanged = true;
+    }
+}
+
+void PreciseCameraController::SetViewPortSize(uint32_t width, uint32_t height) {
+    auto newScalerCrop = m_scalerCrop;
+    newScalerCrop.width = width;
+    newScalerCrop.height = height;
+    if (CheckViewPort(newScalerCrop))
+    {
+        m_scalerCrop = newScalerCrop;
+        m_scalerCropChanged = true;
+    }
+}
+
+bool PreciseCameraController::CheckViewPort(const libcamera::Rectangle &rect) {
+    return rect.topLeft().x >= 0 && rect.topLeft().x + rect.size().width <= k_matrixWidth &&
+           rect.topLeft().y >= 0 && rect.topLeft().y + rect.size().height <= k_matrixHeight;
+}
+
+void PreciseCameraController::ValidateScalerCrop(libcamera::Request *request) {
+    if (m_scalerCropChanged)
+    {
+        libcamera::ControlList &controls = request->controls();
+        controls.set(libcamera::controls::ScalerCrop, m_scalerCrop);
+        m_scalerCropChanged = false;
+    }
+}
+
+void PreciseCameraController::AddProcessor(std::shared_ptr<FrameProcessingInterface> proc) {
     std::lock_guard<std::mutex> lck{m_procMutex};
     m_processors.emplace_back(proc);
     proc->SetFrameSize(m_width, m_height);
 }
 
-void CameraController::OnRequestComplete(libcamera::Request *request) {
+void PreciseCameraController::OnRequestComplete(libcamera::Request *request) {
     if (request->status() == libcamera::Request::RequestCancelled) {
         return;
     }
@@ -181,11 +228,12 @@ void CameraController::OnRequestComplete(libcamera::Request *request) {
     request->reuse(libcamera::Request::ReuseBuffers);
 
     if (m_autoRestartFlag) {
+        ValidateScalerCrop(request);
         m_camera->queueRequest(request);
     }
 }
 
-void CameraController::SetActive(bool active) {
+void PreciseCameraController::SetActive(bool active) {
     m_autoRestartFlag = active;
     if (active) {
         Start();

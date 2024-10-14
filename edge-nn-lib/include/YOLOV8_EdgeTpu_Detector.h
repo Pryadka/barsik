@@ -14,7 +14,7 @@ namespace barsik_cv {
 class YOLOV8_EdgeTpu_Detector: public EdgeTpu_DetectorBase {
 public:
     using VectorType = cv::Point2i;
-    YOLOV8_EdgeTpu_Detector(size_t pcie_device_number, const std::string_view path_to_tflite_model, float threshold = 0.5f);
+    YOLOV8_EdgeTpu_Detector(size_t pcie_device_number, const std::string_view path_to_tflite_model, float threshold = 0.2f);
     ~YOLOV8_EdgeTpu_Detector(){}
 
     struct Detection {

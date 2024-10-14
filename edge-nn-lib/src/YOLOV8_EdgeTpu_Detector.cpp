@@ -9,6 +9,7 @@ YOLOV8_EdgeTpu_Detector::YOLOV8_EdgeTpu_Detector(size_t pcie_device_number,
     m_threshold{threshold}
 {
     m_inputKoeficient = (1. / 255.) / m_inputKoeficient;
+    std::cout << "m_inputKoeficient=" << m_inputKoeficient << ", offset=" << m_inputOffset << std::endl;
 }
 
 std::vector<YOLOV8_EdgeTpu_Detector::Detection> YOLOV8_EdgeTpu_Detector::ExecuteInference(const uint8_t *data) {
@@ -26,32 +27,33 @@ std::vector<YOLOV8_EdgeTpu_Detector::Detection> YOLOV8_EdgeTpu_Detector::Execute
     m_interpreter->Invoke();
 
     const auto *const output = m_interpreter->typed_output_tensor<int8_t>(0);
-    typedef int8_t OutputArray[1][84][8400];
+    typedef int8_t OutputArray[84][8400];
     OutputArray* out = (OutputArray*)output;
 
     std::vector<Detection> res;
+    const float image_scale = m_outputScale * 640;
 
     for (size_t i = 4; i < 84; i++) {
         std::vector<cv::Rect> rects;
         const int class_num = i - 4;
-	for (size_t j = 0; j < 8400; j++) {
-            float p = ((*out)[0][i][j] - m_outputOffset) * m_outputScale;
+	    for (size_t j = 0; j < 8400; j++) {
+            float p = (static_cast<int>((*out)[i][j]) - m_outputOffset) * m_outputScale;
             if (p > m_threshold) {
-                float x = ((*out)[0][0][j] - m_outputOffset) * m_outputScale * 640;
-                float y = ((*out)[0][1][j] - m_outputOffset) * m_outputScale * 640;
-                float w = ((*out)[0][2][j] - m_outputOffset) * m_outputScale * 640;
-                float h = ((*out)[0][3][j] - m_outputOffset) * m_outputScale * 640;
+                float x = (static_cast<int>((*out)[0][j]) - m_outputOffset) * image_scale;
+                float y = (static_cast<int>((*out)[1][j]) - m_outputOffset) * image_scale;
+                float w = (static_cast<int>((*out)[2][j]) - m_outputOffset) * image_scale;
+                float h = (static_cast<int>((*out)[3][j]) - m_outputOffset) * image_scale;
                 int x1 = std::max(0, static_cast<int>(x - w/2));
                 int y1 = std::max(0, static_cast<int>(y - h/2));
                 rects.emplace_back(cv::Rect{x1, y1, static_cast<int>(w), static_cast<int>(h)});
             }
         }
-        std::cout << "Class " << class_num << " has " << rects.size() << " bounding boxes" << std::endl;
-        if (rects.size() > 0) {
-            for (const auto &r : rects) {
-                 std::cout << "  x=" << r.x << ",y=" << r.y << ",w=" << r.width << ",h=" << r.height << std::endl;
-            }
-        }
+        // std::cout << "Class " << class_num << " has " << rects.size() << " bounding boxes" << std::endl;
+        // if (rects.size() > 0) {
+        //     for (const auto &r : rects) {
+        //          std::cout << "  x=" << r.x << ",y=" << r.y << ",w=" << r.width << ",h=" << r.height << std::endl;
+        //     }
+        // }
         auto pred = NonMaximumSupression(rects);
         if (pred.size() > 0) {
             std::cout << "Class " << class_num << " has " << pred.size() << " objects" << std::endl;
@@ -59,10 +61,10 @@ std::vector<YOLOV8_EdgeTpu_Detector::Detection> YOLOV8_EdgeTpu_Detector::Execute
             for (const auto &obj:pred) {
                 std::cout << "   " << i++ << ". with x=" << obj.x << ",y=" << obj.y << ",width=" << obj.width << ",height=" << obj.height << std::endl;
                	Detection det;
-		det.object_class = class_num;
+                det.object_class = class_num;
                 det.center = (obj.br() + obj.tl()) / 2.;
                 det.size = obj.size();
-		res.emplace_back(det);
+                res.emplace_back(det);
             }
         }
     }

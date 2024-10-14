@@ -1,4 +1,5 @@
 #include "FlyingObjectDetectionFrameProcessor.h"
+#include <iostream>
 
 namespace camera_utility
 {
@@ -20,9 +21,10 @@ FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor(int wid
             {
                 std::lock_guard<std::mutex> lock(m_mtx);
                 const auto res = m_detector.ExecuteInference(m_frame.data);
-                if (res != -1) {
+                if (res.first != -1) {
                     barsik_interfaces::msg::FisheyeStatus msg;
-                    msg.set__detection(static_cast<uint8_t>(res));
+                    msg.set__detection(static_cast<uint8_t>(res.first));
+                    msg.set__probability(res.second);
                     m_publisher->publish(msg);
                 }
             }
@@ -31,6 +33,8 @@ FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor(int wid
 }
 
 FlyingObjectDetectionFrameProcessor::~FlyingObjectDetectionFrameProcessor() {
+    m_run = false;
+    m_detectionThread.join();
 }
 
 void FlyingObjectDetectionFrameProcessor::SetFrameSize(uint32_t width, uint32_t height) {
