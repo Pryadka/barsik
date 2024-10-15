@@ -6,7 +6,6 @@
 
 #include "ObjectDetectionProcessNode.h"
 #include "FlyingObjectProcessNode.h"
-#include "DataProviderStatusPublisher.h"
 
 #include <thread>
 #include <chrono>
@@ -41,11 +40,10 @@ int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
 
-    DataProviderStatusPublisher statusSetter;
-    statusSetter.SetActiveStatus(true, false);
+    Coordinator coordinator;
 
-    auto fisheye_detector_reciever = std::make_shared<FlyingObjectProcessNode>();
-    auto precise_detector_reciever = std::make_shared<ObjectDetectionProcessNode>();
+    auto fisheye_detector_reciever = std::make_shared<FlyingObjectProcessNode>(coordinator);
+    auto precise_detector_reciever = std::make_shared<ObjectDetectionProcessNode>(coordinator);
 
     std::thread t{
         []() {

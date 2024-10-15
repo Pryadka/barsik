@@ -1,7 +1,8 @@
 #include "ObjectDetectionProcessNode.h"
 
-ObjectDetectionProcessNode::ObjectDetectionProcessNode() :
+ObjectDetectionProcessNode::ObjectDetectionProcessNode(Coordinator &coordinator) :
     rclcpp::Node{"detection_processor"}
+  , m_coordinator{coordinator}
 {
     auto process_message_callback =
         [this](barsik_interfaces::msg::PreciseDetections::UniquePtr msg) -> void {
