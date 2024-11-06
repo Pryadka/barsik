@@ -34,12 +34,6 @@ FlyingObjectDetectionNode::FlyingObjectDetectionNode() :
         [this](barsik_interfaces::msg::ActivateDataProvider::UniquePtr msg) -> void {
             RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fish eye camera active %s", msg->fish_eye_camera_active ? "Yes": "No");
             m_cameraController.SetActive(msg->fish_eye_camera_active);
-            if (m_saveFrames && msg->fish_eye_camera_active == false) {
-                if (m_frameProcessor->HasFrame()) {
-                    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Saving image %lu", m_imageNumber);
-                    SaveImage(m_frameProcessor->GetLatestFrame());
-                }
-            }
         };
             
     m_activation_subscription =

@@ -30,14 +30,8 @@ PreciseObjectDetectionNode::PreciseObjectDetectionNode() :
 
     auto activation_callback =
         [this](barsik_interfaces::msg::ActivateDataProvider::UniquePtr msg) -> void {
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fish eye camera active %s", msg->fish_eye_camera_active ? "Yes": "No");
-            m_cameraController.SetActive(msg->fish_eye_camera_active);
-            if (msg->fish_eye_camera_active == false) {
-                if (m_frameProcessor->HasFrame()) {
-                    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Saving image %lu", m_imageNumber);
-                    SaveImage(m_frameProcessor->GetLatestFrame());
-                }
-            }
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Precise camera active %s", msg->high_resolution_camera_active ? "Yes": "No");
+            m_cameraController.SetActive(msg->high_resolution_camera_active);
         };
             
     m_activation_subscription =

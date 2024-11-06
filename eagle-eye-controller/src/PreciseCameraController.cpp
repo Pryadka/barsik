@@ -234,9 +234,11 @@ void PreciseCameraController::OnRequestComplete(libcamera::Request *request) {
 }
 
 void PreciseCameraController::SetActive(bool active) {
-    m_autoRestartFlag = active;
-    if (active) {
-        Start();
+    if (m_autoRestartFlag != active) {
+        m_autoRestartFlag = active;
+        if (active) {
+            Start();
+        }
     }
 }
 

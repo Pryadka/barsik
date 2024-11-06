@@ -186,9 +186,11 @@ void CameraController::OnRequestComplete(libcamera::Request *request) {
 }
 
 void CameraController::SetActive(bool active) {
-    m_autoRestartFlag = active;
-    if (active) {
-        Start();
+    if (m_autoRestartFlag != active) {
+        m_autoRestartFlag = active;
+        if (active) {
+            Start();
+        }
     }
 }
 

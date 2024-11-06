@@ -1,10 +1,15 @@
 #include "Coordinator.h"
 #include <algorithm>
 
-using namespace std::chrono ;
+using namespace std::chrono;
 
-Coordinator::Coordinator() {
+Coordinator::Coordinator()
+{
     m_statusSetter.SetActiveStatus(true, false);
+
+    for (auto &n : m_fisheyeDetections) {
+        n = 11;
+    }
 }
 
 Coordinator::~Coordinator() {
@@ -12,33 +17,53 @@ Coordinator::~Coordinator() {
 }
 
 void Coordinator::NewFisheyeDetection(int n) {
+    static const std::array<std::pair<int, int>, 10> anglesForSectors = {{
+            { 0 ,  5},
+            { 5,  5},
+            { 5,  0},
+            { 5, -5},
+            { 0 , -5},
+            { 0 ,  5},
+            {-5,  5},
+            {-5,  0},
+            {-5, -5},
+            { 0 , -5}
+        }};
     if (m_fireInProgress) return;
-
+    
     std::shift_right(m_fisheyeDetections.begin(), m_fisheyeDetections.end(), 1);
     m_fisheyeDetections[0] = n;
-    if (n == 0) {
+
+    int confidences[12] = {0};
+    static const int confidenceTable[10] = {
+        89, 55, 34, 21, 13, 8, 5, 3, 2, 1
+    };
+
+
+    for (int t = 0; t < 12; t++) {
+        for (size_t i = 0; i < m_fisheyeDetections.size(); i++) {
+            if (m_fisheyeDetections[i] == t) {
+                confidences[t] += confidenceTable[i];
+            }
+        }
+    }
+
+    auto maxItemIt = std::max_element(std::begin(confidences), std::end(confidences));
+    int filteredN = (*maxItemIt >= 144) ? std::distance(std::begin(confidences), maxItemIt) : 11;
+    
+    if (filteredN == 0) {
         m_statusSetter.SetActiveStatus(false, true);
         return;
     }
     if (n != 11) {
-        static const std::array<std::pair<int, int>, 10> anglesForSectors = {{
-            {0, -72},
-            {90, -36},
-            {90, 0},
-            {90, 36},
-            {0, 72},
-            {0, -72},
-            {-90, -36},
-            {-90, 0},
-            {-90, 36},
-            {0, 72}
-        }};
-        m_turretController.SetHorizontalAngleDiff(anglesForSectors[n-1].second);
-        m_turretController.SetVerticalAngleDiff(anglesForSectors[n-1].first);
+        m_turretController.SetHorizontalAngleDiff(anglesForSectors[n - 1].second);
+        m_turretController.SetVerticalAngleDiff(anglesForSectors[n - 1].first);
+    } else {
+        m_turretController.MoveToBasePosition();
     }
 }
 
-void Coordinator::NewPreciseDetection(std::vector<PrecisionDetection> &detections) {
+void Coordinator::NewPreciseDetection(std::vector<PreciseDetection> &detections) {
     if (m_fireInProgress) return;
 
     if (detections.empty()) {
@@ -47,7 +72,7 @@ void Coordinator::NewPreciseDetection(std::vector<PrecisionDetection> &detection
     }
 
     // first step -> only one detection 
-    const PrecisionDetection &det = detections[0];
+    const PreciseDetection &det = detections[0];
     int x_diff = det.x - 320;
     int y_diff = det.y - 320;
 

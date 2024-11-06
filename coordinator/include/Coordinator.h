@@ -12,7 +12,7 @@ public:
     Coordinator();
     ~Coordinator();
 
-    struct PrecisionDetection {
+    struct PreciseDetection {
         int x;
         int y;
         int size;
@@ -20,7 +20,7 @@ public:
     };
 
     void NewFisheyeDetection(int n);
-    void NewPreciseDetection(std::vector<PrecisionDetection> &detections);
+    void NewPreciseDetection(std::vector<PreciseDetection> &detections);
 
 private:
     DataProviderStatusPublisher m_statusSetter;

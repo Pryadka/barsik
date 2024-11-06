@@ -25,7 +25,11 @@ FlyingObjectDetectionFrameProcessor::FlyingObjectDetectionFrameProcessor(int wid
                     barsik_interfaces::msg::FisheyeStatus msg;
                     msg.set__detection(static_cast<uint8_t>(res.first));
                     msg.set__probability(res.second);
-                    m_publisher->publish(msg);
+                    static int n = 0;
+                    if (++n == 10) {
+                        m_publisher->publish(msg);
+                        n = 0;
+                    }
                 }
             }
         }

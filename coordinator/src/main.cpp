@@ -50,7 +50,7 @@ int main(int argc, char * argv[])
             DebugImageRecordPublisher publisher;
             while(true) {
                 std::this_thread::sleep_for(1000ms);
-                publisher.SaveImage(false, false);
+                publisher.SaveImage(false, true);
             }
         }
     };
