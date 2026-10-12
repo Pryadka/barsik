@@ -68,7 +68,7 @@ ImuKalmanNode::ImuKalmanNode() : Node("imu_kalman_node"), i2c_file_(-1) {
 
     timer_ = create_wall_timer(
         std::chrono::milliseconds(10),
-        std::bind(&ImuKalmanNode::update_callback, this)
+        [this]() {return update_callback();}
     );
 
     RCLCPP_INFO(get_logger(), "IMU + BMP180 Kalman Node successfully started.");
@@ -85,16 +85,25 @@ bool ImuKalmanNode::writeRegister(int addr, uint8_t reg, uint8_t val) {
 }
 
 bool ImuKalmanNode::readWord3D(int addr, uint8_t reg, int16_t &x, int16_t &y, int16_t &z) {
-    if (ioctl(i2c_file_, I2C_SLAVE, addr) < 0) return false;
-    uint8_t reg_buf[1] = { static_cast<uint8_t>(reg | 0x80) };
-    if (write(i2c_file_, reg_buf, 1) != 1) return false;
-    uint8_t data[6];
-    if (read(i2c_file_, data, 6) != 6) return false;
+    if (ioctl(i2c_file_, I2C_SLAVE, addr) < 0) {
+        return false;
+    }
 
-    x = static_cast<int16_t>(data[0] | (data[1] << 8));
-    y = static_cast<int16_t>(data[2] | (data[3] << 8));
-    z = static_cast<int16_t>(data[4] | (data[5] << 8));
-    return true;
+    uint8_t reg_buf[1] = { static_cast<uint8_t>(reg | 0x80) };
+    if (write(i2c_file_, reg_buf, 1) != 1) {
+        RCLCPP_ERROR(get_logger(), (std::string("i2c failed! reg=") + std::to_string(reg)).c_str());
+        return false;
+    }
+
+    uint8_t data[6];
+    if (read(i2c_file_, data, 6) == 6) {
+        x = static_cast<int16_t>(data[0] | (data[1] << 8));
+        y = static_cast<int16_t>(data[2] | (data[3] << 8));
+        z = static_cast<int16_t>(data[4] | (data[5] << 8));
+        return true;
+    }
+
+    return false;
 }
 
 bool ImuKalmanNode::readBMP180Short(uint8_t reg, int16_t &value) {
@@ -190,8 +199,9 @@ void ImuKalmanNode::update_callback() {
     int16_t gyro_x, gyro_y, gyro_z;
 
     if (!readWord3D(LSM303D_ADDR, 0x28, acc_x, acc_y, acc_z) ||
-        !readWord3D(LSM303D_ADDR, 0x08, mag_x, mag_y, mag_z) ||
+        !readWord3D(MAG_ADDR, 0x03, mag_x, mag_y, mag_z) ||
         !readWord3D(L3GD20_ADDR,  0x28, gyro_x, gyro_y, gyro_z)) {
+        RCLCPP_ERROR(get_logger(), "IMU data read failed!");
         return;
     }
 

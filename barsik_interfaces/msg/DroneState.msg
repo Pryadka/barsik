@@ -1,0 +1,10 @@
+int32 latitude
+int32 longitude
+int32 altitude
+int32 relative_altitude
+int16 vx
+int16 vy
+int16 vz
+uint16 heading
+uint16 satellited_visible
+uint16 yaw
