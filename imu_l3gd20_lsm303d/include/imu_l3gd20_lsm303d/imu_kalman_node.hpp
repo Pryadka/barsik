@@ -10,7 +10,8 @@
 #include "sensor_msgs/msg/temperature.hpp"
 #include "std_msgs/msg/float64.hpp"
 
-#define LSM303D_ADDR 0x1D
+#define LSM303D_ADDR 0x19
+#define MAG_ADDR     0x1E
 #define L3GD20_ADDR  0x6B
 #define BMP180_ADDR  0x77
 

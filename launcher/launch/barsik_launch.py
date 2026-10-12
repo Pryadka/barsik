@@ -3,11 +3,11 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        Node(
-            package='turret_controller',
-            executable='turret_controller',
-            name='turret'
-        ),
+        # Node(
+        #     package='turret_controller',
+        #     executable='turret_controller',
+        #     name='turret'
+        # ),
         Node(
             package='fisheye-controller',
             # namespace='fisheye-camera',
@@ -19,9 +19,9 @@ def generate_launch_description():
             executable='eagle-eye-controller',
             name='eagle'
         ),
-        Node(
-            package='coordinator',
-            executable='coordinator',
-            name='coordinator'
-        )
+        # Node(
+        #     package='coordinator',
+        #     executable='coordinator',
+        #     name='coordinator'
+        # )
     ])

@@ -17,6 +17,7 @@ set(msg_files
   "msg/DebugSaveCurrentImage.msg"
   "msg/Detection.msg"
   "msg/PreciseDetections.msg"
+  "msg/DroneState.msg"
 )
 
 set(srv_files
